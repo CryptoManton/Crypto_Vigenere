@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <praktikum.h>
+#include <math.h>
 
 #define GNUPLOT_CMD_FILENAME "gnuplot.in.cmd" /* Name fuer das erzeugte
 						 gnuplot-Kommandofile */
@@ -121,20 +122,16 @@ static void GetFile(void)
 static void CountChars( int start, int offset, int h[NUMCHARS])
   {
     int i;
-    //char c;
+    char c;
 
-    for (i=0; i<NUMCHARS; i++) {
-      h[i] = 0;
-    }
-    for (i=start; i < TextLength; i += offset) {
-      // convert to ASCII-Code
-      int letterToInt = TextArray[i]-65;
-      //printf("%i : Nr. %i\n", TextArray[i], letterToInt);
-      h[letterToInt]++;
-    }
+    for (i=0; i<NUMCHARS; i++) h[i] = 0;
 
-    //}
     /*****************  Aufgabe Teil 3 *****************/
+	for (unsigned int j = start; j < TextLength; j += offset) {
+
+		h[TextArray[j] - 65]++;
+	}
+
   }
 
 /*
@@ -155,11 +152,17 @@ static void CountChars( int start, int offset, int h[NUMCHARS])
 static double AutoCorrelation (int d)
 {
   /*************** Aufgabe Teil 1 ******************/
-  double count = 0;
-  for (int i = 0; i < TextLength-d; i++) {
-    if (TextArray[i] == TextArray[i+d]) count++;
-  }
-  return count;
+
+	double cor = 0;
+	unsigned int index = 0;
+	while ((index + d) < TextLength) {
+		if (TextArray[index] == TextArray[index + d]) {
+			cor++;
+		}
+		index++;
+	}
+
+	return cor;
 }
 
 /*
@@ -174,12 +177,17 @@ static double AutoCorrelation (int d)
 static void CalcPeriod (void)
 {
   /*************** Aufgabe Teil 2 ******************/
-  for (int i = 1; i < MAXPERIOD+1; i++) {
-    if (AutoCor[i] > 0.05f) {
-      Period = i;
-      return;
-    }
-  }
+
+	unsigned int currTop = 1;
+	for (unsigned int i = 1; i < MAXPERIOD + 1; i++) {
+
+		if (AutoCor[i] > AutoCor[currTop]) {
+			currTop = i;
+		}
+	}
+
+	Period = currTop;
+	
 }
 
 /*------------------------------------------------------------------------------*/
@@ -224,197 +232,65 @@ int main(int argc, char **argv)
 
   /* Now call it */
 
-  system ("gnuplot " GNUPLOT_CMD_FILENAME);
+  //system ("gnuplot " GNUPLOT_CMD_FILENAME);
 
   CalcPeriod ();
-
   /*****************  Aufgabe 4 *****************/
-  int counts1[NUMCHARS];
-  int counts2[NUMCHARS];
-  int counts3[NUMCHARS];
-  int counts4[NUMCHARS];
-  int counts5[NUMCHARS];
-  int counts6[NUMCHARS];
-  int counts7[NUMCHARS];
-  int counts8[NUMCHARS];
-  int counts9[NUMCHARS];
-  int counts10[NUMCHARS];
-  int counts11[NUMCHARS];
-  int counts12[NUMCHARS];
-  int counts13[NUMCHARS];
-  int counts14[NUMCHARS];
-  
-  CountChars(0, Period, counts1);
-  CountChars(1, Period, counts2);
-  CountChars(2, Period, counts3);
-  CountChars(3, Period, counts4);
-  CountChars(4, Period, counts5);
-  CountChars(5, Period, counts6);
-  CountChars(6, Period, counts7);
-  CountChars(7, Period, counts8);
-  CountChars(8, Period, counts9);
-  CountChars(9, Period, counts10);
-  CountChars(10, Period, counts11);
-  CountChars(11, Period, counts12);
-  CountChars(12, Period, counts13);
-  CountChars(13, Period, counts14);
+  //Schlüssel mit fester Schlüssellänge Period
+  char keys[Period];
+ 
+  //Starte Schlüsselberechnung
+  for (unsigned int k = 0; k < Period; k++) { 
+	  int absoluteVerteilung[NUMCHARS] = { 0 };
+	  double relativeVerteilung[NUMCHARS] = { 0 };
+	  double kreuzTabelle[NUMCHARS] = { 0 };
 
-  int maxNum = 0;
-  int maxI = 0;
-  printf("1.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts1[i] > maxNum) {
-      maxNum = counts1[i];
-      maxI = i;
-      printf("neu mit %i: %i\n", maxI, maxNum);
-    }
-    printf("%i: %i, ", i, counts1[i]);
+
+	//Berechne absolute Häufigkeiten der Zeichen für k-te Caesar-Chiffre mit fester Schlüssellänge Period
+	  CountChars(k, Period, absoluteVerteilung);
+  
+  
+
+  //Berechne relative Häufigkeiten 
+  for (unsigned j = 0; j < NUMCHARS; j++) {
+	  relativeVerteilung[j] = (double) absoluteVerteilung[j] / (TextLength / Period);
+
   }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("2.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts2[i] > maxNum) {
-      maxI = i;
-      maxNum = counts2[i];
-    }
-    printf("%i: %i, ", i, counts2[i]);
+
+
+  //berechne Kreuzkorrelation für k-te Caesar-Chiffre (verschoben um Schlüssel sc)
+  for (unsigned sc = 0; sc < NUMCHARS; sc++) {
+	  for (unsigned int i = 0; i < NUMCHARS; i++) {
+
+		
+		  kreuzTabelle[sc] += (PropTable[i] - relativeVerteilung[(i + sc) % 26]) * (PropTable[i] - relativeVerteilung[(i + sc) % 26]);
+
+	  }
   }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("3.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    maxI = 0;
-    maxNum = 0;
-    if (counts3[i] > maxNum) {
-      maxI = i;
-      maxNum = counts3[i];
-    }
-    printf("%i: %i, ", i, counts3[i]);
+
+ 
+
+  //Index des kleinsten Werts aus kreuzTabelle ist gesuchter Schlüssel der k-ten Caesar-Chiffre
+  unsigned int currLow = 0;
+  for (unsigned int i = 0; i < NUMCHARS; i++) {
+	  if (kreuzTabelle[i] < kreuzTabelle[currLow]) {
+		  currLow = i;
+		  
+	  }
   }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("4.)\n");
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts4[i] > maxNum) {
-      maxI = i;
-      maxNum = counts4[i];
-    }
-    printf("%i: %i, ", i, counts4[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("5.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts5[i] > maxNum) {
-      maxI = i;
-      maxNum = counts5[i];
-    }
-    printf("%i: %i, ", i, counts5[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("6.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts6[i] > maxNum) {
-      maxI = i;
-      maxNum = counts6[i];
-    }
-    printf("%i: %i, ", i, counts6[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("7.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts7[i] > maxNum) {
-      maxI = i;
-      maxNum = counts7[i];
-    }
-    printf("%i: %i, ", i, counts7[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("8.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts8[i] > maxNum) {
-      maxI = i;
-      maxNum = counts8[i];
-    }
-    printf("%i: %i, ", i, counts8[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("9.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts9[i] > maxNum) {
-      maxI = i;
-      maxNum = counts9[i];
-    }
-    printf("%i: %i, ", i, counts9[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("10.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts10[i] > maxNum) {
-      maxI = i;
-      maxNum = counts10[i];
-    }
-    printf("%i: %i, ", i, counts10[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("11.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts11[i] > maxNum) {
-      maxI = i;
-      maxNum = counts11[i];
-    }
-    printf("%i: %i, ", i, counts11[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("12.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts12[i] > maxNum) {
-      maxI = i;
-      maxNum = counts12[i];
-    }
-    printf("%i: %i, ", i, counts12[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("13.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts13[i] > maxNum) {
-      maxI = i;
-      maxNum = counts13[i];
-    }
-    printf("%i: %i, ", i, counts13[i]);
-  }
-  printf("Max at (%i) with %i\n", maxI, maxNum);
-  printf("14.)\n");
-  maxI = 0;
-  maxNum = 0;
-  for (int i = 0; i < NUMCHARS; i++) {
-    if (counts14[i] > maxNum) {
-      maxI = i;
-      maxNum = counts14[i];
-    }
-    printf("%i: %i, ", i, counts14[i]);
+   
+  
+  keys[k] = (char) (currLow +65);
+
+ 
+  } // end Schlüsselberechnung
+  
+  for (unsigned int i = 0; i < Period; i++) {
+    printf("%c", keys[i]);
   }
   
+  printf("\n");
+
+
   return 0;
 }

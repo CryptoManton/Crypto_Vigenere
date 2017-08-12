@@ -15,7 +15,8 @@
 
 /*********************  Globale Hilfsbvariabeln  *******************/
 String Key;     /* Schlüssel */
-int count = 0;
+int keyIndex = 0;
+int keySize = 0;
 
 /*
  * int Encipher(int c) : Interpretiert C als Zeichen, verschlüsselt es nach der
@@ -23,27 +24,16 @@ int count = 0;
  *                       zurück.
  */
 
-static int Encipher(int c, int i)
+static int Encipher(int c)
   {
-    /*>>>>                                <<<<*
-     *>>>> AUFGABE: Verschlüsseln von `C' <<<<*
-     *>>>>                                <<<<*/
-     int k = i - 65;
-     // Encrypt only the ACSII-Alphabet (065-090)
-     if (c < 65) return c;
-     if (c > 90) return c;
-     // Ceasar Ciph
-     while (k > 0) {
-        // cycle
-        if (c > 89) {
-            c = 65;
-            k--;
-        } else {
-          c++;
-          k--;
-        }
-     }
-     return c;
+
+	int chiff = ((c - 65) + (Key[keyIndex] - 65)) % 26 + 65;
+	printf("keySize: %d keyIndex: %d message: %d chiff: %d \n", keySize, keyIndex, c, chiff);
+
+	keyIndex = (keyIndex + 1) % keySize ;
+	
+
+	return chiff;
   }
 
 
@@ -53,27 +43,15 @@ static int Encipher(int c, int i)
  *                       zurück.
  */
 
-static int Decipher(int c, int i)
+static int Decipher(int c)
   {
-    /*>>>>                                <<<<*
-     *>>>> AUFGABE: Entschlüsseln von `C' <<<<*
-     *>>>>                                <<<<*/
-     int k = i - 65;
-     // Decrypt only the ACSII-Alphabet (065-090)
-     if (c < 65) return c;
-     if (c > 90) return c;
-     // Ceasar Ciph
-     while (k > 0) {
-        // cycle
-        if (c < 66) {
-            c = 90;
-            k--;
-        } else {
-          c--;
-          k--;
-        }
-     }
-     return c;
+	int message = (26 + (c - 65) - (Key[keyIndex] - 65)) % 26 + 65;
+
+	printf("keySize: %d keyIndex: %d chiff: %d message: %d \n", keySize, keyIndex, c, message);
+	keyIndex = (keyIndex + 1) % keySize;
+	
+
+	return message;
   }
 
 
@@ -143,30 +121,54 @@ int main(int argc, char **argv)
    *    decipher : Flag, == 1 im Entschlüsselungsmodus, ansonsten 0.
    */
 
+  unsigned int kI = 0;
+  while (Key[kI] != 0) {
+	  keySize++;
+	  kI++;
+  }
+
+  for (unsigned int i = 0; i < sizeof(zeile); i++) {
+	  zeile[i] = '\0';
+  }
+
+
   do {
     fgets(zeile,sizeof(zeile),infile);
-    if (!feof(infile)) {
+	
+    if (feof(infile)) {
       strip_crlf(zeile);
+	  printf("Letzte Zeile \n");
+	}
       string_to_upper(zeile);
-      /*>>>>                                           <<<<*
-       *>>>> AUFGABE: Vigenere-Verschlüsseln von ZEILE <<<<*
-       *>>>>                                           <<<<*/
-      for (int i = 0; i < strlen(zeile); i++)
-      {
-        if (zeile[i] > 64 && zeile[i] < 91) {
-          if (decipher) {
-            zeile[i] = Decipher(zeile[i], Key[count]);
-          } else {
-            zeile[i] = Encipher(zeile[i], Key[count]);
-          }
-            count = (count + 1) % strlen(Key);
-        }
-      }
+
+	  if (!decipher) {
+	  for (unsigned int i = 0; i < sizeof(zeile); i++) {
+		  if (zeile[i] <= 90 && zeile[i] >= 65) {
+			    zeile[i] = Encipher(zeile[i]);
+		  }
+	  }
+
+	  }
+	  else {
+		  for (unsigned int i = 0; i < sizeof(zeile); i++) {
+			  if (zeile[i] <= 90 && zeile[i] >= 65) {
+				  zeile[i] = Decipher(zeile[i]);
+			  }
+		  }
+	  }
+
       fprintf(outfile,"%s\n",zeile);
-    }
+	  printf("Neue Zeile \n");
+
+	  for (unsigned int i = 0; i < sizeof(zeile); i++) {
+			  zeile[i] = '\0';
+	  }
+    
   }
   while (!feof(infile));
 
+  keyIndex = 0;
+  printf("Schließen \n");
   /* Schließen der Ein- und Ausgabedateien */
   fclose(infile);
   fclose(outfile);
